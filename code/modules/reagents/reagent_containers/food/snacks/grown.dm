@@ -5,13 +5,13 @@
 // Data from the seeds carry over to these grown foods
 // ***********************************************************
 
-var/global/list/special_fruits = list()
+var/list/special_fruits = list()
 //Grown foods
 //Subclass so we can pass on values
 /obj/item/weapon/reagent_containers/food/snacks/grown/
 	var/plantname
 	var/potency = -1
-	var/hydroflags=0 // Used for no-fruit exclusion lists, at the moment
+	var/hydroflags = 0
 	var/datum/seed/seed
 	icon = 'icons/obj/harvest.dmi'
 	New(newloc, newpotency)
@@ -24,7 +24,8 @@ var/global/list/special_fruits = list()
 /proc/get_special_fruits(var/filter=HYDRO_PREHISTORIC|HYDRO_VOX)
 	. = list()
 	for(var/T in existing_typesof(/obj/item/weapon/reagent_containers/food/snacks/grown))
-		if(initial(T:hydroflags) & filter)
+		var/obj/item/weapon/reagent_containers/food/snacks/grown/G = T
+		if(initial(G.hydroflags) & filter)
 			. += T
 
 /obj/item/weapon/reagent_containers/food/snacks/grown/New()
@@ -620,7 +621,7 @@ var/global/list/special_fruits = list()
 	desc = "Its juices lubricate so well, you might slip through space-time."
 	icon_state = "bluespacetomato"
 	potency = 20
-	origin_tech = "bluespace = 3"
+	origin_tech = Tc_BLUESPACE + "=3"
 	filling_color = "#91F8FF"
 	plantname = "bluespacetomato"
 
@@ -789,6 +790,7 @@ var/global/list/special_fruits = list()
 	planted.delay = 50
 	planted.endurance = 100
 	planted.potency = potency
+	planted.light_color = light_color
 	qdel(src)
 
 	to_chat(user, "<span class='notice'>You plant the glowshroom.</span>")
@@ -876,8 +878,6 @@ var/global/list/special_fruits = list()
 	playsound(get_turf(src), 'sound/effects/bang.ogg', 10, 1)
 	qdel(src)
 
-
-var/global/list/available_nofruit_fruits=null
 /obj/item/weapon/reagent_containers/food/snacks/grown/nofruit
 	name = "no-fruit"
 	desc = "Any plant you want, at your fingertips."
@@ -885,15 +885,15 @@ var/global/list/available_nofruit_fruits=null
 	potency = 15
 	filling_color = "#FFFCCC"
 	plantname = "nofruit"
+	var/list/available_fruits = list()
 	var/switching = 0
+	var/current_path = null
 	var/counter = 1
 
 /obj/item/weapon/reagent_containers/food/snacks/grown/nofruit/New()
 	..()
-	//for(var/T in get_special_fruits())
-	//	testing("EXCLUDED GROWN [initial(T:icon_state)]")
-	if(!available_nofruit_fruits)
-		available_nofruit_fruits = existing_typesof(/obj/item/weapon/reagent_containers/food/snacks/grown)-get_special_fruits()
+	available_fruits = existing_typesof(/obj/item/weapon/reagent_containers/food/snacks/grown) - get_special_fruits()
+	available_fruits = shuffle(available_fruits)
 
 /obj/item/weapon/reagent_containers/food/snacks/grown/nofruit/verb/pick_leaf()
 	set name = "Pick no-fruit leaf"
@@ -910,6 +910,8 @@ var/global/list/available_nofruit_fruits=null
 
 /obj/item/weapon/reagent_containers/food/snacks/grown/nofruit/attackby(obj/item/weapon/W, mob/user)
 	if(switching)
+		if(!current_path)
+			return
 		switching = 0
 		var/N = rand(1,3)
 		if(get_turf(user))
@@ -921,7 +923,6 @@ var/global/list/available_nofruit_fruits=null
 				if(3)
 					playsound(get_turf(user), 'sound/weapons/genhit3.ogg', 50, 1)
 		user.visible_message("[user] smacks \the [src] with \the [W].","You smack \the [src] with \the [W].")
-		var/current_path=pick(available_nofruit_fruits)
 		if(src.loc == user)
 			user.drop_item(src, force_drop = 1)
 			var/I = new current_path(get_turf(user))
@@ -934,6 +935,13 @@ var/global/list/available_nofruit_fruits=null
 /obj/item/weapon/reagent_containers/food/snacks/grown/nofruit/proc/randomize()
 	switching = 1
 	mouse_opacity = 2
-	icon_state = "nofruitcycle"
-	if(get_turf(src))
-		playsound(get_turf(src), 'sound/misc/click.ogg', 50, 1)
+	spawn()
+		while(switching)
+			current_path = available_fruits[counter]
+			var/obj/item/weapon/reagent_containers/food/snacks/grown/G = current_path
+			icon_state = initial(G.icon_state)
+			sleep(4)
+			if(counter == available_fruits.len)
+				counter = 0
+				available_fruits = shuffle(available_fruits)
+			counter++

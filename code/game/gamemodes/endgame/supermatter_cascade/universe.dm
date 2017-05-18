@@ -139,7 +139,7 @@
 /datum/universal_state/supermatter_cascade/OverlayAndAmbientSet()
 	set waitfor = FALSE
 	convert_all_parallax()
-	for(var/turf/T in turfs)
+	for(var/turf/T in world)
 		if(istype(T, /turf/space))
 			T.overlays += image(icon = T.icon, icon_state = "end01")
 		else
@@ -160,12 +160,12 @@
 
 /datum/universal_state/supermatter_cascade/proc/convert_all_parallax()
 	for(var/client/C in clients)
-		var/obj/screen/plane_master/parallax_spacemaster/PS = locate() in C.screen
+		var/obj/abstract/screen/plane_master/parallax_spacemaster/PS = locate() in C.screen
 		if(PS)
 			convert_parallax(PS)
 		CHECK_TICK
 
-/datum/universal_state/supermatter_cascade/convert_parallax(obj/screen/plane_master/parallax_spacemaster/PS)
+/datum/universal_state/supermatter_cascade/convert_parallax(obj/abstract/screen/plane_master/parallax_spacemaster/PS)
 	PS.color = list(
 	0,0,0,0,
 	0,0,0,0,

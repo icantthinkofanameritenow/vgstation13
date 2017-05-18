@@ -187,6 +187,8 @@
 		msg += "<span class='info'>[t_He] [t_has] a bluish discoloration to their skin.</span>\n"
 	if(getToxLoss() > 30 && !skipface)
 		msg += "<span class='warning'>[t_He] looks sickly.</span>\n"
+	if((radiation > 30 || rad_tick > 200) && !skipface && !(species.flags & RAD_ABSORB))
+		msg += "<span class='blob'>[t_He] [t_has] reddish blotches on [t_his] skin.</span>\n"
 	//splints
 	for(var/organ in list(LIMB_LEFT_LEG,LIMB_RIGHT_LEG,LIMB_LEFT_ARM,LIMB_RIGHT_ARM))
 		var/datum/organ/external/o = get_organ(organ)
@@ -471,10 +473,6 @@
 			<span class = 'deptradio'>Medical records:</span> <a href='?src=\ref[src];medrecord=`'>\[View\]</a> <a href='?src=\ref[src];medrecordadd=`'>\[Add comment\]</a>\n"}
 
 	msg += "*---------*</span>"
-	if (pose)
-		if( findtext(pose,".",length(pose)) == 0 && findtext(pose,"!",length(pose)) == 0 && findtext(pose,"?",length(pose)) == 0 )
-			pose = addtext(pose,".") //Makes sure all emotes end with a period.
-		msg += "\n[t_He] is [pose]"
 
 	to_chat(user, msg)
 	if(istype(user))

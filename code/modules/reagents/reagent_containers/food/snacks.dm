@@ -342,6 +342,16 @@
 			if(bitecount >= ANIMALBITECOUNT)
 				qdel(src)
 
+/obj/item/weapon/reagent_containers/food/snacks/send_to_past(var/duration)
+	..()
+	var/static/list/resettable_vars = list(
+		"bitecount",
+		"eatverb",
+		"wrapped",
+		"deepfried")
+
+	reset_vars_after_duration(resettable_vars, duration)
+
 
 ////////////////////////////////////////////////////////////////////////////////
 /// FOOD END
@@ -495,6 +505,25 @@
 	icon_state = "chocolatebar"
 	wrapped = 1
 
+/obj/item/weapon/reagent_containers/food/snacks/chocolatebar/wrapped/valentine
+	name = "Valentine's Day chocolate bar"
+	desc = "Made (or bought) with love!"
+	icon_state = "valentinebar"
+	wrapped = 1
+
+/obj/item/weapon/reagent_containers/food/snacks/chocolatebar/wrapped/valentine/New()
+	..()
+	if(time2text(world.realtime, "MM/DD") != "02/14")
+		new /obj/item/weapon/reagent_containers/food/snacks/badrecipe(get_turf(src))
+		qdel(src)
+
+/obj/item/weapon/reagent_containers/food/snacks/chocolatebar/wrapped/valentine/syndicate
+	desc = "Bought (or made) with love!"
+
+/obj/item/weapon/reagent_containers/food/snacks/chocolatebar/wrapped/valentine/syndicate/New()
+	..()
+	reagents.add_reagent(BICARODYNE, 3)
+
 /obj/item/weapon/reagent_containers/food/snacks/chocolateegg
 	name = "chocolate egg"
 	desc = "Such, sweet, fattening food."
@@ -513,6 +542,21 @@
 	desc = "Goes great with Robust Coffee."
 	icon_state = "donut1"
 	food_flags = FOOD_SWEET | FOOD_ANIMAL //eggs are used
+	var/soggy = 0
+
+//Called in drinks.dm attackby
+/obj/item/weapon/reagent_containers/food/snacks/donut/proc/dip(var/obj/item/weapon/reagent_containers/R, mob/user)
+	var/probability = 15*soggy
+	to_chat(user, "<span class='notice'>You dip \the [src] into \the [R]</span>")
+	if(prob(probability))
+		to_chat(user, "<span class='danger'>\The [src] breaks off into \the [R]!</span>")
+		src.reagents.trans_to(R,reagents.maximum_volume)
+		qdel(src)
+		return
+	R.reagents.trans_to(src, rand(3,12))
+	if(!soggy)
+		name = "soggy [name]"
+	soggy += 1
 
 /obj/item/weapon/reagent_containers/food/snacks/donut/normal
 	name = "donut"
@@ -4032,6 +4076,7 @@
 	name = "Potato Salad"
 	desc = "With 21st century technology, it could take as long as three days to make this."
 	icon_state = "potato_salad"
+	trash = /obj/item/trash/snack_bowl
 
 /obj/item/weapon/reagent_containers/food/snacks/potatosalad/New()
 	..()
@@ -4305,6 +4350,7 @@
 	trash = /obj/item/trash/pietin
 	var/list/available_snacks = list()
 	var/switching = 0
+	var/current_path = null
 	var/counter = 1
 
 /obj/item/weapon/reagent_containers/food/snacks/pie/nofruitpie/New()
@@ -4312,6 +4358,7 @@
 	reagents.add_reagent(NOTHING, 20)
 	bitesize = 10
 	available_snacks = existing_typesof(/obj/item/weapon/reagent_containers/food/snacks) - typesof(/obj/item/weapon/reagent_containers/food/snacks/grown) - typesof(/obj/item/weapon/reagent_containers/food/snacks/customizable)
+	available_snacks = shuffle(available_snacks)
 
 /obj/item/weapon/reagent_containers/food/snacks/pie/nofruitpie/verb/pick_leaf()
 	set name = "Pick no-fruit pie leaf"
@@ -4328,6 +4375,8 @@
 
 /obj/item/weapon/reagent_containers/food/snacks/pie/nofruitpie/attackby(obj/item/weapon/W, mob/user)
 	if(switching)
+		if(!current_path)
+			return
 		switching = 0
 		var/N = rand(1,3)
 		switch(N)
@@ -4338,7 +4387,6 @@
 			if(3)
 				playsound(user, 'sound/weapons/genhit3.ogg', 50, 1)
 		user.visible_message("[user] smacks \the [src] with \the [W].","You smack \the [src] with \the [W].")
-		var/current_path = pick(available_snacks)
 		if(src.loc == user)
 			user.drop_item(src, force_drop = 1)
 			var/I = new current_path(get_turf(user))
@@ -4351,8 +4399,16 @@
 /obj/item/weapon/reagent_containers/food/snacks/pie/nofruitpie/proc/randomize()
 	switching = 1
 	mouse_opacity = 2
-	icon_state = "nofruitcycle"
-	playsound(src, 'sound/misc/click.ogg', 50, 1)
+	spawn()
+		while(switching)
+			current_path = available_snacks[counter]
+			var/obj/item/weapon/reagent_containers/food/snacks/S = current_path
+			icon_state = initial(S.icon_state)
+			sleep(4)
+			if(counter == available_snacks.len)
+				counter = 0
+				available_snacks = shuffle(available_snacks)
+			counter++
 
 /obj/item/weapon/reagent_containers/food/snacks/sundayroast
 	name = "Sunday roast"
@@ -4576,6 +4632,7 @@
 	desc = "Perfect for those occasions when engineering doesn't set up power."
 	icon_state = "midnightsnack"
 	bitesize = 2
+	trash = /obj/item/trash/snack_bowl
 
 /obj/item/weapon/reagent_containers/food/snacks/midnightsnack/New()
 	..()
@@ -4597,6 +4654,7 @@
 	desc = "Eating too much of this salad may cause you to want to cut off your own ear."
 	icon_state = "starrynight"
 	bitesize = 2
+	trash = /obj/item/trash/snack_bowl
 
 /obj/item/weapon/reagent_containers/food/snacks/starrynightsalad/New()
 	..()
@@ -4608,10 +4666,22 @@
 	desc = "Popular among cargo technicians who break into fruit crates."
 	icon_state = "fruitsalad"
 	bitesize = 2
+	trash = /obj/item/trash/snack_bowl
 
 /obj/item/weapon/reagent_containers/food/snacks/fruitsalad/New()
 	..()
 	reagents.add_reagent(NUTRIMENT,4)
+
+/obj/item/weapon/reagent_containers/food/snacks/nofruitsalad
+	name = "no-fruit salad"
+	desc = "Attempting to make this meal cycle through other types of salad was prohibited by special council decision after six weeks of intensive debate at the central hub for Galatic International Trade."
+	icon_state = "nofruitsalad"
+	bitesize = 4
+	trash = /obj/item/trash/snack_bowl
+
+/obj/item/weapon/reagent_containers/food/snacks/nofruitsalad/New()
+	..()
+	reagents.add_reagent(NOTHING,20)
 
 /obj/item/weapon/reagent_containers/food/snacks/spicycoldnoodles
 	name = "spicy cold noodles"
@@ -4863,3 +4933,92 @@
 	..()
 	reagents.add_reagent(NUTRIMENT, 8)
 	bitesize = 2
+
+/obj/item/weapon/reagent_containers/food/snacks/poutinedangerous
+	name = "dangerously cheesy poutine"
+	desc = "Fries, cheese, gravy & more cheese. Be careful with this, it's dangerous!"
+	icon_state = "poutinedangerous"
+	food_flags = FOOD_ANIMAL //cheese
+
+/obj/item/weapon/reagent_containers/food/snacks/poutinedangerous/New()
+	..()
+	reagents.add_reagent(CHEESYGLOOP, 3) //need 2+ wheels to reach overdose, which will stop the heart until all is removed
+	bitesize = 3
+
+/obj/item/weapon/reagent_containers/food/snacks/poutinebarrel
+	name = "dangerously cheesy poutine barrel"
+	desc = "Four cheese wheels full of gravy, fries and cheese curds, arranged like a barrel. This is degeneracy, Canadian style."
+	icon_state = "poutinebarrel"
+	food_flags = FOOD_ANIMAL //cheese
+
+/obj/item/weapon/reagent_containers/food/snacks/poutinebarrel/New()
+	..()
+	reagents.add_reagent(CHEESYGLOOP, 5)
+	bitesize = 4
+
+/obj/item/weapon/reagent_containers/food/snacks/mapleleaf
+	name = "maple leaf"
+	desc = "A large maple leaf."
+	icon_state = "mapleleaf"
+
+/obj/item/weapon/reagent_containers/food/snacks/mapleleaf/New()
+	..()
+	reagents.add_reagent(MAPLESYRUP, 10)
+	bitesize = 2
+
+/obj/item/weapon/reagent_containers/food/snacks/poutinesyrup
+	name = "maple syrup poutine"
+	desc = "French fries lathered with Canadian maple syrup and cheese curds. Delightful, eh?"
+	icon_state = "poutinesyrup"
+	trash = /obj/item/trash/plate
+	food_flags = FOOD_ANIMAL //cheese
+
+/obj/item/weapon/reagent_containers/food/snacks/poutinesyrup/New()
+	..()
+	reagents.add_reagent(NUTRIMENT, 5)
+	reagents.add_reagent(MAPLESYRUP, 5)
+	bitesize = 2
+
+/obj/item/weapon/reagent_containers/food/snacks/bleachkipper
+	name = "bleach kipper"
+	desc = "Baby blue and very fishy."
+	icon_state = "bleachkipper"
+	trash = /obj/item/trash/plate
+	food_flags = FOOD_MEAT
+	volume = 1
+	bitesize = 2
+
+/obj/item/weapon/reagent_containers/food/snacks/bleachkipper/New()
+	..()
+	reagents.add_reagent(FISHBLEACH, 1)
+
+/obj/item/weapon/reagent_containers/food/snacks/pie/mudpie
+	name = "mud pie"
+	desc = "While not looking very appetizing, it at least looks like somebody had fun making it."
+	icon_state = "mud_pie"
+	filling_color = "#462B20"
+
+/obj/item/weapon/reagent_containers/food/snacks/pie/mudpie/New()
+	..()
+	reagents.clear_reagents()
+	reagents.add_reagent(NUTRIMENT, rand(0,2))
+	reagents.add_reagent(TOXIN, rand(1,5))
+	if(prob(15))
+		name = "exceptional " + initial(name)
+		desc = "The crème de la pire of culinary arts."
+		reagents.add_reagent(SUGAR, 2)
+		reagents.add_reagent(TOXIN, rand(3,8))
+		reagents.add_reagent(COCO, 3)
+	bitesize = 2
+
+/obj/item/weapon/reagent_containers/food/snacks/magbites
+	name = "mag-bites"
+	desc = "Tiny boot-shaped cheese puffs. Made with real magnets!\
+	<br>Warning: not suitable for those with heart conditions or on medication, consult your doctor before consuming this product. Cheese dust may stain or dissolve fabrics."
+	icon_state = "magbites"
+
+/obj/item/weapon/reagent_containers/food/snacks/magbites/New()
+	..()
+	reagents.add_reagent(MEDCORES, 6)
+	reagents.add_reagent(SODIUMCHLORIDE, 6)
+	reagents.add_reagent(NUTRIMENT, 4)

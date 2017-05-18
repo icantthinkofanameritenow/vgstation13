@@ -549,6 +549,12 @@ a {
 		return (M_CLUMSY in user.mutations)
 	return 0
 
+//Proc that handles NPCs (gremlins) "tampering" with this object.
+//Return NPC_TAMPER_ACT_FORGET if there's no interaction (the NPC won't try to tamper with this again)
+//Return NPC_TAMPER_ACT_NOMSG if you don't want to create a visible_message
+/obj/proc/npc_tamper_act(mob/living/L)
+	return NPC_TAMPER_ACT_FORGET
+
 /obj/actual_send_to_future(var/duration)
 	var/turf/current_turf = get_turf(src)
 	var/datum/current_loc = loc
@@ -560,3 +566,11 @@ a {
 		forceMove(current_loc)
 	else
 		forceMove(current_turf)
+
+/obj/send_to_past(var/duration)
+	..()
+	var/static/list/resettable_vars = list(
+		"sharpness",
+		"integratedpai")
+
+	reset_vars_after_duration(resettable_vars, duration)
